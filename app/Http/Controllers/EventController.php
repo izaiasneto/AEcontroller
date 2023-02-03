@@ -7,54 +7,37 @@ use Illuminate\Http\Request;
 use App\Models\Event;
 use App\Models\User;
 
+use khill\Lavacharts\Lavacharts;
+
 class EventController extends Controller
 {
 
     public function index() {
 
-        $search = request('search');
+        $events = Event::all();
 
-        if($search){
-            $events = Event::where([
-                ['title', 'like', '%' . $search . '%']
-            ])->get();
-        } else {
-            $events = Event::all();
-        }
-
-        return view('welcome',['events' => $events, 'search' => $search]);
+        return view('welcome',['events' => $events]);
 
     }
 
     public function create() {
-        return view('events.create');
+        return view('events.modal.create');
     }
 
     public function store(Request $request) {
 
         $event = new Event;
 
-        $event->title = $request->title;
+        $event->status = $request->status;
+        $event->name = $request->name;
+        $event->phone = $request->phone;
         $event->date = $request->date;
-        $event->city = $request->city;
-        $event->private = $request->private;
         $event->description = $request->description;
-        $event->items = $request->items;
-
-        // Image Upload
-        if($request->hasFile('image') && $request->file('image')->isValid()) {
-
-            $requestImage = $request->image;
-
-            $extension = $requestImage->extension();
-
-            $imageName = md5($requestImage->getClientOriginalName() . strtotime("now")) . "." . $extension;
-
-            $requestImage->move(public_path('img/events'), $imageName);
-
-            $event->image = $imageName;
-
-        }
+        $event->street = $request->street;
+        $event->number = $request->number;
+        $event->district = $request->district;
+        $event->city = $request->city;
+        $event->value = $request->value;
 
         $user = auth()->user();
         $event->user_id = $user->id;
@@ -62,7 +45,7 @@ class EventController extends Controller
 
         $event->save();
 
-        return redirect('/')->with('msg', 'Evento criado com sucesso!');
+        return redirect('products')->with('msg', 'Pedido cadastrado criado com sucesso!');
 
 
     }
@@ -71,101 +54,97 @@ class EventController extends Controller
 
         $event = Event::findOrFail($id);
 
-        $user = auth()->user();
-        $hasUserJoined = false;
 
-        if($user) {
-
-            $userEvents = $user->eventsAsParticipant->toArray();
-
-            foreach($userEvents as $userEvent) {
-                if($userEvent['id'] == $id) {
-                    $hasUserJoined = true;
-                }
-            }
-
-        }
-
-        $eventOwner = User::where('id', $event->user_id)->first()->toArray();
-
-        return view('events.show', ['event' => $event, 'eventOwner' => $eventOwner, 'hasUserJoined' => $hasUserJoined]);
+        return view('events.modal.show', ['event' => $event]);
 
     }
 
     public function dashboard() {
+        $products = Event::all();
 
-        $user = auth()->user();
+        $loc = array();
 
-        $events = $user->events;
+        foreach($products as $product){
+            $loc[$product->district - 1];
+        }
 
-        $eventsAsParticipant = $user->eventsAsParticipant;
-
-        return view('events.dashboard',
-            ['events' => $events, 'eventsasparticipant' => $eventsAsParticipant]
-        );
+        return view('events.dashboard', ['products' => $products]);
 
     }
 
-    public function destroy($id){
-        Event::findOrFail($id)->delete();
+    public function products() {
 
-        return redirect('/dashboard')->with('msg', 'Evento excluído com sucesso');
+        $events = Event::orderBy('created_at')->get();
+
+        $bairros = Event::orderBy('district', 'asc')->get();
+
+        return view('events.products', compact('events', 'bairros'));
+
+    }
+
+
+    public function destroy(Request $request){
+        $product_id = $request->input('delete_product_id');
+        $product = Event::findOrFail($product_id);
+        $product->delete();
+
+        return redirect()->back()->with('msg', 'Evento excluído com sucesso');
     }
 
     public function edit($id){
-        $user = auth()->user();
         $event = Event::findOrFail($id);
 
-        if($user->id != $event->user->id){
-            return redirect('/dashboard');
-        }
+        return response()->json([
+            'status' => 200,
+            'product' => $event,
+        ]);
 
-        return view('events.edit', ['event' => $event]);
     }
 
     public function update(request $request){
-        $data = $request->all();
 
-        // Image Upload
-        if($request->hasFile('image') && $request->file('image')->isValid()) {
+        $product_id = $request->input('product_id1');
+        $event = Event::find($product_id);
 
-            $requestImage = $request->image;
+        $event->status = $request->input('status1');
+        $event->name = $request->input('name1');
+        $event->phone = $request->input('phone1');
+        $event->date = $request->input('date1');
+        $event->description = $request->input('description1');
+        $event->street = $request->input('street1');
+        $event->number = $request->input('number1');
+        $event->district = $request->input('district1');
+        $event->city = $request->input('city1');
+        $event->value = $request->input('value1');
 
-            $extension = $requestImage->extension();
+        $event->update();
 
-            $imageName = md5($requestImage->getClientOriginalName() . strtotime("now")) . "." . $extension;
+        return redirect('/dashboard')->with('msg', 'Pedido atualiadocriado com sucesso!');
+    }
 
-            $requestImage->move(public_path('img/events'), $imageName);
+    public function search(){
 
-            $data['image'] = $imageName;
+        $events = Event::all();
 
+        if($_GET['nome']){
+            $search_text = $_GET['nome'];
+            $events=Event::where('name', 'LIKE', '%' . $search_text . '%')->get();
         }
 
-        Event::findOrFail($request->id)->update($data);
+        if($_GET['bairro_id']){
+            $search_text = $_GET['bairro_id'];
+            $events=Event::where('district', 'LIKE', '%' . $search_text . '%')->get();
+        }
 
-        return redirect('/dashboard')->with('msg', 'Evento editado com sucesso');
-    }
+        if($_GET['data']){
+            $search_text = $_GET['data'];
+            $events=Event::where('date', 'LIKE', '%'.$search_text.'%')->get();
+        }
 
-    public function joinEvent($id) {
 
-        $user = auth()->user();
+        $bairros = Event::orderBy('district')->get();
 
-        $user->eventsAsParticipant()->attach($id);
-
-        $event = Event::findOrFail($id);
-
-        return redirect('/dashboard')->with('msg', 'Sua presença está confirmada no evento ' . $event->title);
-
-    }
-
-    public function leaveEvent($id){
-        $user = auth()->user();
-
-        $user->eventsAsParticipant()->detach($id);
-
-        $event = Event::findOrFail($id);
-
-        return redirect('/dashboard')->with('msg', 'Voce saiu com sucesso do evento: ' . $event->title);
+        return view('events.products', compact('events', 'bairros'));
     }
 
 }

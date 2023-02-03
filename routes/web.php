@@ -15,19 +15,19 @@ use Illuminate\Support\Facades\Route;
 */
 
 use App\Http\Controllers\EventController;
+use App\Http\Controllers\ProductsController;
 
 Route::get('/', [EventController::class, 'index']);
 Route::get('/events/create', [EventController::class, 'create'])->middleware('auth');
 Route::get('/events/{id}', [EventController::class, 'show']);
 Route::post('/events', [EventController::class, 'store']);
-Route::delete('/events/{id}', [EventController::class, 'destroy'])->middleware('auth');
 Route::get('/events/edit/{id}', [EventController::class, 'edit'])->middleware('auth');
-Route::put('events/update/{id}', [EventController::class, 'update'])->middleware('auth');
-Route::post('events/join/{id}', [EventController::class, 'joinEvent'])->middleware('auth');
-Route::delete('events/leave/{id}', [EventController::class, 'leaveEvent'])->middleware('auth');
+Route::put('update-product', [EventController::class, 'update'])->middleware('auth');
+Route::delete('delete-product', [EventController::class, 'destroy'])->middleware('auth');
+Route::get('/dashboard',[EventController::class, 'dashboard'])->middleware('auth');
+Route::get('products/search', [EventController::class, 'search'])->middleware('auth');
+Route::get('products', [EventController::class, 'products'])->middleware('auth');
 
-Route::get('/contact', function () {
-    return view('contact');
-});
+//export excel
+Route::get('products/export/', [ProductsController::class, 'export'])->name('excel')->middleware('auth');;
 
-Route::get('/dashboard', [EventController::class, 'dashboard'])->middleware('auth');

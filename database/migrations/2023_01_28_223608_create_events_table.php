@@ -16,10 +16,15 @@ return new class extends Migration
         Schema::create('events', function (Blueprint $table) {
             $table->id();
             $table->timestamps();
-            $table->string('title');
+            $table->string('name');
+            $table->string('phone');
             $table->text('description');
+            $table->string('Street');
+            $table->integer('number');
+            $table->string('district');
             $table->string('city');
-            $table->boolean('private');
+            $table->boolean('status');
+            $table->float('value');
         });
     }
 
