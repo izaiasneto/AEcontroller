@@ -7,8 +7,6 @@ use Illuminate\Http\Request;
 use App\Models\Event;
 use App\Models\User;
 
-use khill\Lavacharts\Lavacharts;
-
 class EventController extends Controller
 {
 
@@ -61,12 +59,6 @@ class EventController extends Controller
 
     public function dashboard() {
         $products = Event::all();
-
-        $loc = array();
-
-        foreach($products as $product){
-            $loc[$product->district - 1];
-        }
 
         return view('events.dashboard', ['products' => $products]);
 
